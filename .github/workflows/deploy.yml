@@ -24,6 +24,6 @@ jobs:
       - name: Deploy to VM
         run: |
           gcloud compute ssh \
-            ${{ secrets.VM_USER }}@${{ secrets.VM_NAME }} \
+            ${{ secrets.VM_NAME }} \
             --zone=${{ secrets.VM_ZONE }} \
             --command="echo 'Hello from GitHub Actions' >> ~/deploy.txt"
