@@ -9,7 +9,7 @@ env:
   PROJECT_ID: ${{ secrets.GCP_PROJECT_ID }}
   REGION: us-central1
   SERVICE: fastapi-service
-  REPO: fastapi-repo
+  REPO: test
 
 jobs:
   deploy:
