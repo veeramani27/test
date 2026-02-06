@@ -1,17 +1,25 @@
-name: Deploy to GCE
+name: Deploy FastAPI to Cloud Run
 
 on:
   push:
-    branches: [ "main" ]
+    branches:
+      - main
+
+env:
+  PROJECT_ID: ${{ secrets.GCP_PROJECT_ID }}
+  REGION: us-central1
+  SERVICE: fastapi-service
+  REPO: fastapi-repo
 
 jobs:
   deploy:
     runs-on: ubuntu-latest
 
     steps:
-      - uses: actions/checkout@v4
+      - name: Checkout
+        uses: actions/checkout@v4
 
-      - name: Authenticate to GCP
+      - name: Authenticate to Google Cloud
         uses: google-github-actions/auth@v2
         with:
           credentials_json: ${{ secrets.GCP_SA_KEY }}
@@ -21,9 +29,21 @@ jobs:
         with:
           project_id: ${{ secrets.GCP_PROJECT_ID }}
 
-      - name: Deploy to VM
+      - name: Configure Docker
+        run: gcloud auth configure-docker $REGION-docker.pkg.dev --quiet
+
+      - name: Build image
         run: |
-          gcloud compute ssh \
-            ${{ secrets.VM_NAME }} \
-            --zone=${{ secrets.VM_ZONE }} \
-            --command="echo 'Hello from GitHub Actions' >> ~/deploy.txt"
+          docker build -t $REGION-docker.pkg.dev/$PROJECT_ID/$REPO/fastapi-app:${{ github.sha }} .
+
+      - name: Push image
+        run: |
+          docker push $REGION-docker.pkg.dev/$PROJECT_ID/$REPO/fastapi-app:${{ github.sha }}
+
+      - name: Deploy to Cloud Run
+        run: |
+          gcloud run deploy $SERVICE \
+            --image $REGION-docker.pkg.dev/$PROJECT_ID/$REPO/fastapi-app:${{ github.sha }} \
+            --region $REGION \
+            --platform managed \
+            --allow-unauthenticated
