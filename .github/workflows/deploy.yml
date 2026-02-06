@@ -59,5 +59,7 @@ jobs:
 
       - name: Deploy to Kubernetes
         run: |
+          kubectl apply -f k8s/deployment.yaml
           kubectl set image deployment/fastapi \
             fastapi=$REGION-docker.pkg.dev/$PROJECT_ID/$REPO/$IMAGE:${{ github.sha }}
+
