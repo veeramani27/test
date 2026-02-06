@@ -1,19 +1,24 @@
-name: Deploy FastAPI to Cloud Run
+name: Deploy to GKE using Workload Identity
 
 on:
   push:
-    branches:
-      - main
+    branches: [ main ]
 
 env:
   PROJECT_ID: ${{ secrets.GCP_PROJECT_ID }}
-  REGION: europe-west4
-  SERVICE: fastapi-service
-  REPO: test
+  REGION: us-central1
+  ZONE: us-central1-a
+  CLUSTER: ci-cd-cluster
+  REPO: fastapi-repo
+  IMAGE: fastapi-app
 
 jobs:
   deploy:
     runs-on: ubuntu-latest
+
+    permissions:
+      id-token: write
+      contents: read
 
     steps:
       - name: Checkout
@@ -22,28 +27,29 @@ jobs:
       - name: Authenticate to Google Cloud
         uses: google-github-actions/auth@v2
         with:
-          credentials_json: ${{ secrets.GCP_SA_KEY }}
+          workload_identity_provider: ${{ secrets.WIF_PROVIDER }}
+          service_account: ${{ secrets.GCP_SA_EMAIL }}
 
       - name: Setup gcloud
         uses: google-github-actions/setup-gcloud@v2
-        with:
-          project_id: ${{ secrets.GCP_PROJECT_ID }}
 
       - name: Configure Docker
         run: gcloud auth configure-docker $REGION-docker.pkg.dev --quiet
 
-      - name: Build image
+      - name: Build Docker image
         run: |
-          docker build -t $REGION-docker.pkg.dev/$PROJECT_ID/$REPO/fastapi-app:${{ github.sha }} .
+          docker build -t $REGION-docker.pkg.dev/$PROJECT_ID/$REPO/$IMAGE:${{ github.sha }} .
 
-      - name: Push image
+      - name: Push Docker image
         run: |
-          docker push $REGION-docker.pkg.dev/$PROJECT_ID/$REPO/fastapi-app:${{ github.sha }}
+          docker push $REGION-docker.pkg.dev/$PROJECT_ID/$REPO/$IMAGE:${{ github.sha }}
 
-      - name: Deploy to Cloud Run
+      - name: Get GKE credentials
         run: |
-          gcloud run deploy $SERVICE \
-            --image $REGION-docker.pkg.dev/$PROJECT_ID/$REPO/fastapi-app:${{ github.sha }} \
-            --region $REGION \
-            --platform managed \
-            --allow-unauthenticated
+          gcloud container clusters get-credentials $CLUSTER \
+            --zone $ZONE
+
+      - name: Deploy to Kubernetes
+        run: |
+          kubectl set image deployment/fastapi \
+            fastapi=$REGION-docker.pkg.dev/$PROJECT_ID/$REPO/$IMAGE:${{ github.sha }}

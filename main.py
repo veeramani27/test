@@ -5,7 +5,7 @@ app = FastAPI()
 
 @app.get("/")
 def root():
-    return {"message": "Hello from Cloud Run and this is a test repo! Thank you for visiting!"}
+    return {"message": "Hello from Cloud Run .new commit -10"}
 
 
 @app.get("/health")
