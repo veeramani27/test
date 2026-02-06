@@ -9,7 +9,7 @@ env:
   REGION: us-central1
   ZONE: us-central1-a
   CLUSTER: ci-cd-cluster
-  REPO: fastapi-repo
+  REPO: test
   IMAGE: fastapi-app
 
 jobs:
